@@ -52,4 +52,5 @@ main = do
     hClose tempFileHandle
 
     (_, Just hout, Just herr, pid) <- createProcess (proc "visitors" [tempFilePath]){ cwd = Just "/tmp", std_out = CreatePipe, std_err = CreatePipe }
-    stream hout >>= putStrLn . unpack
+
+    stream hout >>= BS.writeFile ((fromMaybe "stats" name) ++ ".html")

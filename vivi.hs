@@ -16,9 +16,6 @@ matchingLogs :: Maybe String -> [String] -> [String]
 matchingLogs Nothing = filter $ isPrefixOf ("access.")
 matchingLogs (Just name) = filter $ isPrefixOf (name ++ "_access.")
 
-concatIOStringList :: [IO String] -> IO String
-concatIOStringList = fmap concat . sequence
-
 rawFilesLogs :: [String] -> IO String
 rawFilesLogs files = concatIOStringList [readFilesLog readFile ".log" files, readFilesLog readFile ".log.1" files]
 
@@ -26,7 +23,7 @@ gzipedFilesLogs :: [String] -> IO String
 gzipedFilesLogs = readFilesLog (fmap (unpack . decompress) . BS.readFile) ".gz"
 
 readFilesLog :: (FilePath -> IO String) -> String -> ([String] -> IO String)
-readFilesLog f extension = concatIOStringList . map f . filter (isSuffixOf extension)
+readFilesLog f extension = (fmap concat . sequence) . map f . filter (isSuffixOf extension)
 
 fullPathLs :: FilePath -> Maybe String -> IO [String]
 fullPathLs path name = getDirectoryContents path >>= return . map (path ++) . matchingLogs name

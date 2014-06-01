@@ -19,4 +19,3 @@ executable vivi
   main-is:             vivi.hs
   -- other-modules:       
   build-depends:       base ==4.6.*,directory,zlib,bytestring,process,temporary,text
-  GHC-Options:         "-threaded"

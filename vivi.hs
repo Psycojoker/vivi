@@ -1,7 +1,7 @@
 import Data.ByteString.Lazy.Char8(unpack)
 import qualified Data.ByteString.Lazy as BS
 import Codec.Compression.GZip(decompress)
-import Control.Monad(liftM2)
+import Control.Applicative(pure, (<*>))
 import Data.List(isPrefixOf, isSuffixOf)
 import Data.Maybe(listToMaybe, fromMaybe)
 import Data.Text(pack)
@@ -17,7 +17,7 @@ matchingLogs Nothing = filter $ isPrefixOf ("access.")
 matchingLogs (Just name) = filter $ isPrefixOf (name ++ "_access.")
 
 rawFilesLogs :: [String] -> IO String
-rawFilesLogs files = concatIOStringList [readFilesLog readFile ".log" files, readFilesLog readFile ".log.1" files]
+rawFilesLogs files = pure (++) <*> (readFilesLog readFile ".log" files) <*> (readFilesLog readFile ".log.1" files)
 
 gzipedFilesLogs :: [String] -> IO String
 gzipedFilesLogs = readFilesLog (fmap (unpack . decompress) . BS.readFile) ".gz"
@@ -31,7 +31,7 @@ fullPathLs path name = getDirectoryContents path >>= return . map (path ++) . ma
 main = do
     name <- getArgs >>= return . listToMaybe
     apacheLogs <- fullPathLs "/var/log/apache2/" name
-    logsContent <- liftM2 (++) (rawFilesLogs apacheLogs) (gzipedFilesLogs apacheLogs)
+    logsContent <- pure (++) <*> (rawFilesLogs apacheLogs) <*> (gzipedFilesLogs apacheLogs)
     (tempFilePath, tempFileHandle) <- openTempFile "/tmp" (fromMaybe "for_visitors" name)
     hPutStr tempFileHandle $ pack logsContent
     hClose tempFileHandle

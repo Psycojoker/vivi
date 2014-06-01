@@ -1,6 +1,7 @@
 import Data.ByteString.Lazy.Char8(unpack)
 import qualified Data.ByteString.Lazy as BS
 import Codec.Compression.GZip(decompress)
+import Control.Monad(liftM2)
 import Data.List(isPrefixOf, isSuffixOf)
 import Data.Maybe(listToMaybe, fromMaybe)
 import Data.Text(pack)
@@ -33,10 +34,9 @@ fullPathLs path name = getDirectoryContents path >>= return . map (path ++) . ma
 main = do
     name <- getArgs >>= return . listToMaybe
     apacheLogs <- fullPathLs "/var/log/apache2/" name
-    rawLogsContent <- rawFilesLogs apacheLogs
-    gzipedLogsContent <- gzipedFilesLogs apacheLogs
+    logsContent <- liftM2 (++) (rawFilesLogs apacheLogs) (gzipedFilesLogs apacheLogs)
     (tempFilePath, tempFileHandle) <- openTempFile "/tmp" (fromMaybe "for_visitors" name)
-    hPutStr tempFileHandle $ pack $ rawLogsContent ++ gzipedLogsContent
+    hPutStr tempFileHandle $ pack logsContent
     hClose tempFileHandle
 
     (_, Just hout, _, pid) <- createProcess (proc "visitors" [tempFilePath]){ cwd = Just "/tmp", std_out = CreatePipe }

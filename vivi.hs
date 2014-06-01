@@ -1,3 +1,4 @@
+import Data.ByteString.Lazy(hGet, ByteString(), append, empty)
 import Data.ByteString.Lazy.Char8(unpack)
 import qualified Data.ByteString.Lazy as BS
 import Codec.Compression.GZip(decompress)
@@ -5,10 +6,10 @@ import Control.Applicative(pure, (<*>))
 import Data.List(isPrefixOf, isSuffixOf)
 import Data.Maybe(listToMaybe, fromMaybe)
 import Data.Text(pack)
-import Data.Text.IO(hGetContents, hPutStr)
+import Data.Text.IO(hPutStr)
 import System.Environment(getArgs)
 import System.Directory(getDirectoryContents)
-import System.IO(hClose)
+import System.IO(hClose, Handle)
 import System.IO.Temp(openTempFile)
 import System.Process(createProcess, proc, std_out, std_err, cwd, StdStream(CreatePipe), waitForProcess)
 
@@ -28,6 +29,13 @@ readFilesLog f extension = (fmap concat . sequence) . map f . filter (isSuffixOf
 fullPathLs :: FilePath -> Maybe String -> IO [String]
 fullPathLs path name = getDirectoryContents path >>= return . map (path ++) . matchingLogs name
 
+stream :: Handle -> IO ByteString
+stream h = do
+    content <- hGet h (1024*1024)
+    if content == empty
+       then return empty
+       else pure append <*> (return content) <*> stream h
+
 main = do
     name <- getArgs >>= return . listToMaybe
     apacheLogs <- fullPathLs "/var/log/apache2/" name
@@ -37,6 +45,5 @@ main = do
     hClose tempFileHandle
 
     (_, Just hout, Just herr, pid) <- createProcess (proc "visitors" [tempFilePath]){ cwd = Just "/tmp", std_out = CreatePipe, std_err = CreatePipe }
-    waitForProcess pid
-    hGetContents hout >>= putStrLn . show
+    stream hout >>= putStrLn . show
     putStrLn tempFilePath

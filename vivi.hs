@@ -10,7 +10,7 @@ import System.Environment(getArgs)
 import System.Directory(getDirectoryContents)
 import System.IO(hClose)
 import System.IO.Temp(openTempFile)
-import System.Process(createProcess, proc, std_out, cwd, StdStream(CreatePipe), waitForProcess)
+import System.Process(createProcess, proc, std_out, std_err, cwd, StdStream(CreatePipe), waitForProcess)
 
 matchingLogs :: Maybe String -> [String] -> [String]
 matchingLogs Nothing = filter $ isPrefixOf ("access.")
@@ -39,7 +39,7 @@ main = do
     hPutStr tempFileHandle $ pack logsContent
     hClose tempFileHandle
 
-    (_, Just hout, _, pid) <- createProcess (proc "visitors" [tempFilePath]){ cwd = Just "/tmp", std_out = CreatePipe }
-    hGetContents hout >>= putStrLn . show
+    (_, Just hout, Just herr, pid) <- createProcess (proc "visitors" [tempFilePath]){ cwd = Just "/tmp", std_out = CreatePipe, std_err = CreatePipe }
     waitForProcess pid
+    hGetContents hout >>= putStrLn . show
     putStrLn tempFilePath

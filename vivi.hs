@@ -36,9 +36,16 @@ stream h = do
        then return empty
        else pure append <*> (return content) <*> stream h
 
+getLogs :: Maybe String -> IO [String]
+getLogs name = do
+    logs <- fullPathLs "/var/log/apache2/" name
+    if length logs == 0
+       then fullPathLs "/var/log/nginx/" name
+       else return logs
+
 main = do
     name <- getArgs >>= return . listToMaybe
-    apacheLogs <- fullPathLs "/var/log/apache2/" name
+    apacheLogs <- getLogs name
     logsContent <- pure (++) <*> (rawFilesLogs apacheLogs) <*> (gzipedFilesLogs apacheLogs)
     (tempFilePath, tempFileHandle) <- openTempFile "/tmp" (fromMaybe "for_visitors" name)
     hPutStr tempFileHandle $ pack logsContent
